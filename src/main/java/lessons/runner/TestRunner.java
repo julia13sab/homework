@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class TestRunner<T> {
+public class TestRunner {
 
     public static void runTests(UnitExample instance) {
         beforeSuite(instance);
@@ -29,6 +29,7 @@ public class TestRunner<T> {
             if (beforeSuites.size() > 1) {
                 throw new TestRunException("Методов с аннотацией 'BeforeSuite' не может быть > 1");
             }
+
             invokeMethod(beforeSuites.get(0), instance, "Ошибка выполнения метода 'BeforeSuite'!");
         }
     }
@@ -43,7 +44,7 @@ public class TestRunner<T> {
         tests.forEach(test -> {
             beforeTest.forEach(before -> invokeMethod(before, instance, "Ошибка выполнения метода 'beforeTest'!"));
             invokeMethod(test, instance, "Ошибка выполнения теста");
-            afterTest.forEach(before -> invokeMethod(before, instance, "Ошибка выполнения метода 'aferTest'!"));
+            afterTest.forEach(after -> invokeMethod(after, instance, "Ошибка выполнения метода 'aferTest'!"));
         });
     }
 
@@ -61,11 +62,13 @@ public class TestRunner<T> {
         try {
             final var csvSource = method.getAnnotation(CsvSource.class);
             if (Objects.nonNull(csvSource)) {
-                final var parameters = csvSource.parameter().split(" ");
+                final var parameters = csvSource.parameter().split(",");
                 final var parameterTypes = method.getParameterTypes();
+                if (parameters.length != parameterTypes.length) {
+                    throw new TestRunException("Количество параметров в аннотации CsvSource не соответствует количеству параметров метода: " + method.getName());
+                }
                 final var convertedParameters = convertParameters(parameters, parameterTypes);
                 method.invoke(instance, convertedParameters);
-                method.invoke(instance);
             } else {
                 method.invoke(instance);
             }
@@ -84,7 +87,7 @@ public class TestRunner<T> {
 
     private static Object[] convertParameters(String[] parameters, Class<?>[] parameterTypes) {
         Object[] convertedParameters = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
+        for (int i = 0; i < convertedParameters.length; i++) {
             convertedParameters[i] = convertParameter(parameters[i].trim(), parameterTypes[i]);
         }
         return convertedParameters;
