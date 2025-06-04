@@ -1,29 +1,25 @@
 package lessons.runner;
 
-
-
 import lessons.annotations_for_test.*;
 import lessons.exception.TestRunException;
-import lessons.instance.UnitExample;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TestRunner {
 
-    public static void runTests(UnitExample instance) {
+    private static final Map<Class<?>, Map<Class<? extends Annotation>, List<Method>>> methodCache = new ConcurrentHashMap<>();
+
+    public static <T> void runTests(T instance) {
         beforeSuite(instance);
         execute(instance);
         afterSuite(instance);
     }
 
-    private static void beforeSuite(UnitExample instance) {
+    private static <T> void beforeSuite(T instance) {
         final var beforeSuites = getAnnotatedMethods(instance.getClass(), BeforeSuite.class, true);
         if (!beforeSuites.isEmpty()) {
             if (beforeSuites.size() > 1) {
@@ -34,10 +30,20 @@ public class TestRunner {
         }
     }
 
-    private static void execute(UnitExample instance) {
-        final var tests = getAnnotatedMethods(instance.getClass(), Test.class, false)
-                .stream().sorted(Comparator.comparingInt(a -> a.getAnnotation(Test.class).priority().getValue()))
-                .toList();
+    private static <T> void execute(T instance) {
+        List<Method> methods = getAnnotatedMethods(instance.getClass(), Test.class, false);
+        List<Method> tests = new ArrayList<>();
+
+        for (Method method : methods) {
+            Test testAnnotation = method.getAnnotation(Test.class);
+            int priority = testAnnotation.priority().getValue();
+            if (priority < 1 || priority > 10) {
+                throw new TestRunException("Метод " + method.getName() + " имеет приоритет " + priority + ", который не находится в диапазоне от 1 до 10.");
+            }
+            tests.add(method);
+        }
+
+        tests.sort(Comparator.comparingInt(a -> a.getAnnotation(Test.class).priority().getValue()));
 
         final var beforeTest = getAnnotatedMethods(instance.getClass(), BeforeTest.class, false);
         final var afterTest = getAnnotatedMethods(instance.getClass(), AfterTest.class, false);
@@ -48,7 +54,7 @@ public class TestRunner {
         });
     }
 
-    private static void afterSuite(UnitExample instance) {
+    private static <T> void afterSuite(T instance) {
         final var afterSuites = getAnnotatedMethods(instance.getClass(), AfterSuite.class, true);
         if (!afterSuites.isEmpty()) {
             if (afterSuites.size() > 1) {
@@ -58,7 +64,7 @@ public class TestRunner {
         }
     }
 
-    private static void invokeMethod(Method method, UnitExample instance, String error) {
+    private static <T> void invokeMethod(Method method, T instance, String error) {
         try {
             final var csvSource = method.getAnnotation(CsvSource.class);
             if (Objects.nonNull(csvSource)) {
@@ -77,12 +83,22 @@ public class TestRunner {
         }
     }
 
-    private static List<Method> getAnnotatedMethods(Class clazz, Class annotationClazz, boolean checkStatic) {
-        return Stream.of(clazz.getDeclaredMethods())
-                .filter(method -> !checkStatic || Modifier.isStatic(method.getModifiers()))
-                .filter(method -> Arrays.stream(method.getAnnotations()).anyMatch(annotation ->
-                        annotationClazz.equals(annotation.annotationType())))
-                .collect(Collectors.toList());
+    private static List<Method> getAnnotatedMethods(Class<?> clazz, Class<? extends Annotation> annotationClazz, boolean checkStatic) {
+        return methodCache.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(annotationClazz, k -> {
+                    List<Method> methods = new ArrayList<>();
+                    for (Method method : clazz.getDeclaredMethods()) {
+                        if (!checkStatic || Modifier.isStatic(method.getModifiers())) {
+                            for (Annotation annotation : method.getAnnotations()) {
+                                if (annotationClazz.equals(annotation.annotationType())) {
+                                    methods.add(method);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    return methods;
+                });
     }
 
     private static Object[] convertParameters(String[] parameters, Class<?>[] parameterTypes) {
