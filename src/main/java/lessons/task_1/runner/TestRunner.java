@@ -1,12 +1,12 @@
-package lessons.runner;
+package lessons.task_1.runner;
 
-import lessons.annotations_for_test.AfterSuite;
-import lessons.annotations_for_test.AfterTest;
-import lessons.annotations_for_test.BeforeSuite;
-import lessons.annotations_for_test.BeforeTest;
-import lessons.annotations_for_test.CsvSource;
-import lessons.annotations_for_test.Test;
-import lessons.exception.TestRunException;
+import lessons.task_1.annotations_for_test.AfterSuite;
+import lessons.task_1.annotations_for_test.AfterTest;
+import lessons.task_1.annotations_for_test.BeforeSuite;
+import lessons.task_1.annotations_for_test.BeforeTest;
+import lessons.task_1.annotations_for_test.CsvSource;
+import lessons.task_1.annotations_for_test.Test;
+import lessons.task_1.exception.TestRunException;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;

@@ -1,8 +1,8 @@
-package lessons.instance;
+package lessons.task_1.instance;
 
-import lessons.annotations_for_test.*;
-import lessons.enums.Priority;
-import lessons.runner.TestRunner;
+import lessons.task_1.annotations_for_test.*;
+import lessons.task_1.enums.Priority;
+import lessons.task_1.runner.TestRunner;
 
 public class UnitExample {
 

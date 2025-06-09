@@ -1,4 +1,4 @@
-package lessons.exception;
+package lessons.task_1.exception;
 
 public class TestRunException extends RuntimeException {
 

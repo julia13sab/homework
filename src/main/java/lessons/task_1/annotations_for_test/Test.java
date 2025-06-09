@@ -1,6 +1,6 @@
-package lessons.annotations_for_test;
+package lessons.task_1.annotations_for_test;
 
-import lessons.enums.Priority;
+import lessons.task_1.enums.Priority;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

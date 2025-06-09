@@ -1,4 +1,4 @@
-package lessons.annotations_for_test;
+package lessons.task_1.annotations_for_test;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,5 +7,5 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface AfterSuite {
+public @interface BeforeTest {
 }

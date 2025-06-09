@@ -1,4 +1,4 @@
-package lessons.enums;
+package lessons.task_1.enums;
 
 public enum Priority {
 
