@@ -36,7 +36,7 @@ public class TetsMain {
 
 
 
-        List<String> fourthTestList = new ArrayList<>(Arrays.asList("это", "список", "слов", "найти", "самое", "длинное", "например", "энциклопедия"));
+        List<String> fourthTestList = new ArrayList<>(Arrays.asList("это", "список", "слов", "найти", "самое", "длинное", "например", "энциклопедия1", "энциклопедия2"));
         fourthTestList.stream().max(Comparator.comparingInt(String::length)).ifPresent(System.out::println);
 
     }
