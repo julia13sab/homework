@@ -79,7 +79,7 @@ public class UnitExample {
     }
 
     public static void main(String[] args) {
-        TestRunner.runTests(new UnitExample());
+        TestRunner.runTests(UnitExample.class);
     }
 
     private static void printParameterTypeAndValue(String paramName, Object paramValue) {

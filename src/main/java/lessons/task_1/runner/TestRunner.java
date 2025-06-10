@@ -8,7 +8,6 @@ import lessons.task_1.annotations_for_test.CsvSource;
 import lessons.task_1.annotations_for_test.Test;
 import lessons.task_1.exception.TestRunException;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -20,50 +19,64 @@ public class TestRunner {
 
     private static Method beforeSuite = null;
     private static Method afterSuite = null;
-    private static List<Method> beforeTest = new ArrayList<>();
-    private static List<Method> afterTest = new ArrayList<>();
-    private static List<Method> tests = new ArrayList<>();
+    private static final List<Method> beforeTest = new ArrayList<>();
+    private static final List<Method> afterTest = new ArrayList<>();
+    private static final List<Method> tests = new ArrayList<>();
 
-    public static <T> void runTests(T instance) {
-        init(instance);
-        execute(instance);
+    public static void runTests(Class clazz) {
+        init(clazz);
+        execute(clazz);
     }
 
-    private static <T> void init(T instance) {
-        final var beforeSuites = getAnnotatedMethods(instance.getClass(), BeforeSuite.class, true);
-
-        if (beforeSuites.size() > 1) {
-            throw new TestRunException("Методов с аннотацией 'BeforeSuite' не может быть > 1");
-        }
-        if (!beforeSuites.isEmpty()) {
-            beforeSuite = beforeSuites.get(0);
-        }
-
-        final var afterSuites = getAnnotatedMethods(instance.getClass(), AfterSuite.class, true);
-        if (afterSuites.size() > 1) {
-            throw new TestRunException("Методов с аннотацией 'AfterSuite' не может быть > 1");
-        }
-        if (!afterSuites.isEmpty()) {
-            afterSuite = afterSuites.get(0);
-        }
-        beforeTest = getAnnotatedMethods(instance.getClass(), BeforeTest.class, false);
-        afterTest = getAnnotatedMethods(instance.getClass(), AfterTest.class, false);
-
-        final var rawTests = getAnnotatedMethods(instance.getClass(), Test.class, false);
-
-        for (Method method : rawTests) {
-            Test testAnnotation = method.getAnnotation(Test.class);
-            int priority = testAnnotation.priority().getValue();
-            if (priority < 1 || priority > 10) {
-                throw new TestRunException("Метод " + method.getName() + " имеет приоритет " + priority + ", который не находится в диапазоне от 1 до 10.");
+    private static void init(Class clazz) {
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(BeforeSuite.class)) {
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    throw new TestRunException("Метод с аннотацией 'BeforeSuite' должен быть статическим!");
+                }
+                if (beforeSuite != null) {
+                    throw new TestRunException("Методов с аннотацией 'BeforeSuite' не может быть > 1");
+                }
+                beforeSuite = method;
+            } else if (method.isAnnotationPresent(AfterSuite.class)) {
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    throw new TestRunException("Метод с аннотацией 'AfterSuite' должен быть статическим!");
+                }
+                if (afterSuite != null) {
+                    throw new TestRunException("Методов с аннотацией 'AfterSuite' не может быть > 1");
+                }
+                afterSuite = method;
+            } else if (method.isAnnotationPresent(BeforeTest.class)) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    throw new TestRunException("Метод с аннотацией 'BeforeTest' не должен быть статическим!");
+                }
+                beforeTest.add(method);
+            } else if (method.isAnnotationPresent(AfterTest.class)) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    throw new TestRunException("Метод с аннотацией 'AfterTest' не должен быть статическим!");
+                }
+                afterTest.add(method);
+            } else if (method.isAnnotationPresent(Test.class)) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    throw new TestRunException("Метод с аннотацией 'Test' не должен быть статическим!");
+                }
+                int priority = method.getAnnotation(Test.class).priority().getValue();
+                if (priority < 1 || priority > 10) {
+                    throw new TestRunException("Метод " + method.getName() + " имеет приоритет " + priority + ", который не находится в диапазоне от 1 до 10.");
+                }
+                tests.add(method);
             }
-            tests.add(method);
         }
-
         tests.sort(Comparator.comparingInt(a -> a.getAnnotation(Test.class).priority().getValue()));
     }
 
-    private static <T> void execute(T instance) {
+    private static void execute(Class clazz) {
+        final Object instance;
+        try {
+            instance = clazz.newInstance();
+        } catch (Exception e) {
+            throw new TestRunException("Ошибка создания экземпляра обьекта", e);
+        }
         invokeMethod(beforeSuite, instance, "Ошибка выполнения метода 'BeforeSuite'!");
 
         tests.forEach(test -> {
@@ -75,7 +88,7 @@ public class TestRunner {
         invokeMethod(afterSuite, instance, "Ошибка выполнения метода 'AfterSuite'!");
     }
 
-    private static <T> void invokeMethod(Method method, T instance, String error) {
+    private static void invokeMethod(Method method, Object instance, String error) {
         if (method == null) {
             return;
         }
@@ -95,21 +108,6 @@ public class TestRunner {
         } catch (Exception e) {
             throw new TestRunException(error, e);
         }
-    }
-
-    private static List<Method> getAnnotatedMethods(Class<?> clazz, Class<? extends Annotation> annotationClazz, boolean checkStatic) {
-        List<Method> methods = new ArrayList<>();
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (!checkStatic || Modifier.isStatic(method.getModifiers())) {
-                for (Annotation annotation : method.getAnnotations()) {
-                    if (annotationClazz.equals(annotation.annotationType())) {
-                        methods.add(method);
-                        break;
-                    }
-                }
-            }
-        }
-        return methods;
     }
 
     private static Object[] convertParameters(String[] parameters, Class<?>[] parameterTypes) {
